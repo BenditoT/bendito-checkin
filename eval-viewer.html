@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "expert-review", "runs": [{"id": "eval-1-full-review-with_skill", "prompt": "Ich habe einen Implementierungsplan f\u00fcr ein Check-in-System auf Google Apps Script. Bitte lass das mal von einem Expertenteam durchgehen \u2014 Sicherheit, Architektur, DevOps und die praktische Seite.", "eval_id": 1, "outputs": [{"name": "EXPERTEN-REVIEW.md", "type": "text", "content": "# Experten-Review Ergebnisse \u2014 Bendito Tango Marathon Check-in & Payment System\n\n**Projekt:** Check-in System + Mollie Payment Integration auf Google Apps Script\n**Stand:** 14.03.2026\n**Review-Team:** 5 Experten (Security, DevOps, Architecture, Domain, Platform)\n**Gesamt-Funde:** 28 Issues (2 KRITISCH-Punkte, 9 HOCH, 13 MITTEL, 4 NIEDRIG)\n\n---\n\n## ZUSAMMENFASSUNG\n\nEin hybrid aus Echtzeit-Check-in (Web-App, offline-first, Scanner) und Zahlungs-Automation (Mollie API, Gmail-Integration) auf GAS. Das System hat **2 kritische Blocker** vor Go-Live, mehrere **High-Priority Sicherheits- und Infrastruktur-Risiken**, und L\u00fccken im **Domain-Workflow** (Fallbacks, Stornierungen, Offline-Szenarien).\n\n**Quick-Wins:** ~15 Stunden Arbeit bis zum Minimum-Viable-Secure-State\n**Safe-to-Launch-State:** ~30 Stunden (inkl. Testing, Dokumentation, Fallback-Prozesse)\n\n---\n\n## SICHERHEITSEXPERTE \u2014 8 Funde\n\n### KRITISCH (2)\n\n#### 1. **Webhook-Sicherheit \u2014 Keine Signatur-Validierung**\n**Quelle:** Security Review \u2014 MollieWebhook.gs:32-91\n**Schwere:** KRITISCH\n**Problem:** Der doPost()-Handler akzeptiert jeden POST mit einer Mollie-ID, ohne die Anfrage zu authentifizieren. Ein Angreifer k\u00f6nnte beliebige Zahlungen als \"bezahlt\" markieren:\n```\ncurl -X POST \"https://script.google.com/.../exec\" -d \"id=pl_xxxxx\"\n```\nZeile 308 pr\u00fcft nur, ob die ID im Sheet existiert, nicht ob der Webhook von Mollie kam.\n\n**L\u00f6sung:**\n```javascript\nfunction doPost(e) {\n  // Mollie sendet HTTP-Header: Mollie-Signature\n  var signature = e.parameter['Mollie-Signature'];\n  var body = e.postData.contents;\n  var secret = PropertiesService.getScriptProperties().getProperty('MOLLIE_WEBHOOK_SECRET');\n\n  // HMAC-SHA256 Signature berechnen\n  var computed = Utilities.computeHmacSha256Signature(body, secret);\n  var encodedComputed = Utilities.base64Encode(computed);\n\n  if (signature !== encodedComputed) {\n    Logger.log('Webhook-Signatur ung\u00fcltig. Request ignoriert.');\n    return ContentService.createTextOutput('Unauthorized')\n      .setMimeType(ContentService.MimeType.TEXT).setResponseCode(401);\n  }\n  // ... Rest des Handlers ...\n}\n```\n\n**Aufwand:** 45 Min\n- 10 Min: Mollie-Secret in PropertiesService speichern (Anleitung schreiben)\n- 15 Min: Signatur-Verifikation implementieren\n- 20 Min: Testing (Webhook simulieren, falsche Signaturen pr\u00fcfen)\n\n**Impact:** Verhindert Zahlungs-F\u00e4lschungen. MUSS vor Go-Live gel\u00f6st sein.\n\n---\n\n#### 2. **MOLLIE_API_KEY im Klartext in Config.gs**\n**Quelle:** Security Review \u2014 Config.gs:16\n**Schwere:** KRITISCH\n**Problem:** Der Live-API-Key ist als String in der Datei hardcodiert. Falls die Datei geleakt wird (GitHub, Backup, Developer-Laptop), hat der Angreifer Zugriff auf alle Mollie-Zahlungen und kann Refunds durchf\u00fchren.\n\n**L\u00f6sung:**\n```javascript\n// In Config.gs: nur noch Referenz\nvar CONFIG = {\n  MOLLIE_API_KEY: function() {\n    return PropertiesService.getScriptProperties().getProperty('MOLLIE_API_KEY');\n  },\n  // ...\n};\n\n// Einmaliges Setup:\nfunction setupSecrets() {\n  var props = PropertiesService.getScriptProperties();\n  props.setProperty('MOLLIE_API_KEY', 'test_hCvgQ3nSVEfp2JAU3aATWfCGgmfMP9');\n  props.setProperty('MOLLIE_WEBHOOK_SECRET', 'whsec_live_xxxxx');\n  props.setProperty('MOLLIE_WEBHOOK_SECRET_TEST', 'whsec_test_xxxxx');\n}\n\n// \u00dcberall wo MOLLIE_API_KEY genutzt wird:\n// ALT: CONFIG.MOLLIE_API_KEY\n// NEU: CONFIG.MOLLIE_API_KEY()\n```\n\n**Aufwand:** 1h 20 Min\n- 15 Min: Setup-Funktion schreiben\n- 30 Min: Alle API-Key-Zugriffe refactoren (ca. 8 Stellen in BenditoMollie.gs, MollieWebhook.gs)\n- 20 Min: Testing\n- 15 Min: Deployment-Anleitung schreiben (wie Secret setzen)\n\n**Impact:** Secrets sind sicher. MUSS vor Go-Live gel\u00f6st sein.\n\n---\n\n### HOCH (3)\n\n#### 3. **XSS in Webhook-Handler \u2014 Template-Injection**\n**Quelle:** Security Review \u2014 MollieWebhook.gs:207\n**Schwere:** HOCH\n**Problem:** In renderSelectionPage_() wird CONFIG.WEBHOOK_URL direkt in JavaScript-String eingebettet und nicht vollst\u00e4ndig escaped. Falls CONFIG.WEBHOOK_URL = 'https://...\"; alert(\"hacked\"); //', bricht die Sanitierung.\n\n**L\u00f6sung:**\n```javascript\n// ALT (unsicher):\n'var BASE_URL=\\\"' + CONFIG.WEBHOOK_URL.replace(/\"/g, '\\\\\"') + '\\\";'\n\n// NEU (sicher):\n'var BASE_URL=' + JSON.stringify(CONFIG.WEBHOOK_URL) + ';'\n'var TOKEN=' + JSON.stringify(token) + ';'\n```\n\n**Aufwand:** 20 Min\n- 10 Min: Code \u00e4ndern (2-3 Stellen in renderSelectionPage_)\n- 10 Min: Testing mit XSS-Payloads\n\n**Impact:** Client-Side Session-Hijacking m\u00f6glich.\n\n---\n\n#### 4. **Payment Token \u2014 Brute-Force Risiko**\n**Quelle:** Security Review \u2014 BenditoMollie.gs:313\n**Schwere:** HOCH\n**Problem:** Token ist zuf\u00e4llig (UUID), aber es gibt kein Rate-Limiting. Falls jemand die Email von Person A f\u00e4ngt und Tokens \"err\u00e4t\" (statistisch sehr unwahrscheinlich, aber m\u00f6glich), k\u00f6nnte er Zahlungsseite f\u00fcr andere Person aufrufen.\n\n**L\u00f6sung:**\n```javascript\nfunction handlePaymentSelection_(e) {\n  try {\n    var token = (e.parameter && e.parameter.token) ? e.parameter.token.toString().trim() : '';\n\n    // Rate-Limiting pr\u00fcfen\n    if (!checkRateLimit_(token)) {\n      return renderErrorPage_('Too many attempts. Please try again later.');\n    }\n\n    // ... Rest ...\n  } catch (err) { ... }\n}\n\nfunction checkRateLimit_(token) {\n  var cache = CacheService.getScriptCache();\n  var key = 'invalid_token_' + token;\n  var attempts = parseInt(cache.get(key) || '0');\n\n  if (attempts > 5) {\n    return false; // Block\n  }\n\n  cache.put(key, (attempts + 1).toString(), 300); // 5 Min TTL\n  return true;\n}\n```\n\n**Aufwand:** 30 Min\n- 15 Min: Rate-Limiting-Logik implementieren\n- 10 Min: Testing\n- 5 Min: Dokumentation\n\n**Impact:** MITTEL \u2014 Praktisch unwahrscheinlich, aber Defense-in-Depth.\n\n---\n\n#### 5. **Keine Email-Validierung**\n**Quelle:** Security Review \u2014 BenditoMollie.gs:133\n**Schwere:** HOCH\n**Problem:** Beliebige Strings werden als Email akzeptiert. Zwar keine direkte SQL-Injection (GAS-Protection), aber Best-Practice ist validieren.\n\n**L\u00f6sung:**\n```javascript\nfunction isValidEmail(email) {\n  var pattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  return pattern.test(email.toString());\n}\n\n// In processPaymentTrigger:\nif (triggerConfig.emailTarget === 'follower') {\n  if (!emailFollower || !isValidEmail(emailFollower)) {\n    SpreadsheetApp.getUi().alert('Ung\u00fcltige E-Mail: ' + emailFollower);\n    range.setValue(false);\n    return;\n  }\n}\n```\n\n**Aufwand:** 15 Min\n\n**Impact:** Defense-in-Depth.\n\n---\n\n### MITTEL (3)\n\n#### 6. **Barcode-API-Validierung fehlt**\n**Quelle:** Security Review\n**Schwere:** MITTEL\n**Problem:** PNG-Blobs von barcode.tec-it.com werden direkt vertraut. MITM-Angriff k\u00f6nnte manipulierte Barcodes einspeisen.\n\n**L\u00f6sung:**\n```javascript\nfunction validateBarcodeImage(blob) {\n  var bytes = blob.getBytes();\n  // PNG Magic Number: 89 50 4E 47 0D 0A 1A 0A\n  if (bytes[0] !== 0x89 || bytes[1] !== 0x50) {\n    throw new Error('Invalid PNG signature in barcode image');\n  }\n  return true;\n}\n```\n\n**Aufwand:** 20 Min\n\n---\n\n#### 7. **Keine Datenl\u00f6schung (DSGVO)**\n**Quelle:** Security Review\n**Schwere:** MITTEL\n**Problem:** Keine Retention-Policy implementiert.\n\n**L\u00f6sung:**\n```javascript\nfunction setupDataRetention() {\n  // Trigger: 30 Tage nach Event laufen\n  var eventDate = new Date('2026-11-01');\n  var retentionDays = 30;\n  var deleteAfter = new Date(eventDate.getTime() + retentionDays * 24 * 60 * 60 * 1000);\n\n  if (new Date() > deleteAfter) {\n    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);\n    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];\n\n    // L\u00f6sche alle sensiblen Daten au\u00dfer: Name, Email (f\u00fcr Support)\n    // Behalte: Zahlungs-IDs, Datum, Basic Stats\n    for (var row = 3; row <= sheet.getLastRow(); row++) {\n      for (var col = 1; col <= sheet.getLastColumn(); col++) {\n        var header = headers[col - 1];\n        if (header.indexOf('phone') > -1 || header.indexOf('address') > -1) {\n          sheet.getRange(row, col).setValue('');\n        }\n      }\n    }\n    Logger.log('Data retention cleanup completed');\n  }\n}\n```\n\n**Aufwand:** 1h (Retention-Policy definieren, Funktion, Zeitlicher Trigger, Test)\n\n---\n\n#### 8. **Logs enthalten PII**\n**Quelle:** Security Review \u2014 BenditoMollie.gs:206\n**Schwere:** MITTEL\n**Problem:** Emails und vollst\u00e4ndige Namen werden in Logger.log() geloggt.\n\n**L\u00f6sung:**\n```javascript\nvar emailHash = Utilities.base64Encode(Utilities.computeDigest(\n  Utilities.DigestAlgorithm.SHA_256, primaryEmail, null));\nLogger.log('Selection-URL gesendet an [' + emailHash.substring(0, 8) + ']');\n```\n\n**Aufwand:** 20 Min\n\n---\n\n## DEVOPS-EXPERTE \u2014 6 Funde\n\n### KRITISCH (2)\n\n#### 1. **Deployment-Rollback nicht m\u00f6glich**\n**Quelle:** DevOps Review\n**Schwere:** KRITISCH\n**Problem:** MollieWebhook ist eigenst\u00e4ndiger Web-App-Deployment. Nach neuem Deploy mit Bug k\u00f6nnen eingehende Mollie-Webhooks nicht verarbeitet werden \u2192 Zahlungen bleiben stecken im Status \"offen\".\n\n**L\u00f6sung:**\n```javascript\n// In MollieWebhook.gs: Version-Tracking\nfunction doPost(e) {\n  var version = '1.0.0'; // Bei jedem Deploy \u00e4ndern!\n\n  try {\n    // ... Handler-Logik ...\n  } catch (err) {\n    // Fehler mit Version loggen\n    postToSlack_('Webhook Error v' + version + ': ' + err.toString());\n    return ContentService.createTextOutput('ERROR').setResponseCode(500);\n  }\n}\n\n// Deployment-Prozess:\n// 1. Code \u00e4ndern\n// 2. version in MollieWebhook.gs erh\u00f6hen\n// 3. appsscript.json Version erh\u00f6hen\n// 4. Deploy (neue Deployment-URL entsteht)\n// 5. Falls Fehler: zu ALTER Deployment-URL (in Config.gs) zur\u00fcckwechseln\n// 6. MOLLIE_WEBHOOK_URL in Mollie-Dashboard aktualisieren\n```\n\n**Aufwand:** 1h 30 Min\n- 20 Min: Deployment-SOP schreiben (1-pager)\n- 30 Min: Versioning in Code einbauen\n- 20 Min: Rollback-Prozess testen\n- 20 Min: Dokumentation\n\n**Impact:** Kritisch f\u00fcr Production-Readiness. MUSS vor Go-Live gel\u00f6st sein.\n\n---\n\n#### 2. **6-Minuten-Timeout bei Email-Versand nicht gemanagt**\n**Quelle:** DevOps Review \u2014 BenditoMollie.gs:180-191\n**Schwere:** KRITISCH\n**Problem:** processPaymentTrigger() sendet Emails synchron im onEdit-Trigger. Barcode-Generierung + Email-Versand dauert ~1-2 Sekunden. Bei 3+ parallelen Edits \u00fcber User-Klicks \u2192 Timeout und Crash.\n\n**L\u00f6sung:** Asynchrone Email-Queue mit zeitgesteuertem Trigger:\n```javascript\n// 1. Email in Queue statt sofort senden\nfunction queueEmailForSending(to, subject, htmlBody, rowId, triggerCode) {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('_EMAIL_QUEUE');\n  if (!sheet) {\n    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet('_EMAIL_QUEUE');\n    sheet.appendRow(['To', 'Subject', 'TriggerCode', 'RowId', 'Status', 'Timestamp', 'Retries']);\n  }\n  sheet.appendRow([to, subject, triggerCode, rowId, 'pending', new Date(), 0]);\n}\n\n// 2. Zeitgesteuerter Trigger: alle 2 Minuten\nfunction processEmailQueue() {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('_EMAIL_QUEUE');\n  var rows = sheet.getRange('A:G').getValues();\n\n  var sent = 0;\n  var maxPerRun = 15; // Max 15 Emails pro 2-Min-Fenster\n\n  for (var i = 1; i < rows.length && sent < maxPerRun; i++) {\n    if (rows[i][4] === 'pending') { // Status = 'pending'\n      try {\n        sendEmail_(rows[i][0], rows[i][1], rows[i][2]);\n        sheet.getRange(i+1, 5).setValue('sent');\n        sheet.getRange(i+1, 6).setValue(new Date());\n        sent++;\n      } catch (err) {\n        var retries = parseInt(rows[i][6] || 0);\n        if (retries < 5) {\n          sheet.getRange(i+1, 7).setValue(retries + 1);\n          // Status bleibt 'pending' f\u00fcr n\u00e4chsten Retry\n        } else {\n          sheet.getRange(i+1, 5).setValue('failed_max_retries');\n          // Alert: Email konnte nicht gesendet werden\n          logAudit_('EMAIL_FAILED', rows[i][3], 'Code: ' + rows[i][2], 'FAILED', err.toString());\n        }\n      }\n    }\n  }\n\n  Logger.log('Email Queue: ' + sent + ' emails sent');\n}\n\n// 3. In onEditTrigger: nicht mehr direkt senden!\nfunction onEditTrigger(e) {\n  try {\n    var sheet = e.source.getActiveSheet();\n    var range = e.range;\n    var row = range.getRow();\n    var col = range.getColumn();\n\n    if (sheet.getName() !== CONFIG.SHEET_NAME || col !== CONFIG.COL.SENDEN) return;\n    if (range.getValue() !== true) return;\n\n    var triggerCode = sheet.getRange(row, CONFIG.COL.TRIGGER).getValue().toString().trim().toLowerCase();\n    if (!CONFIG.TRIGGERS[triggerCode]) {\n      SpreadsheetApp.getUi().alert('Unbekannter Code: ' + triggerCode);\n      range.setValue(false);\n      return;\n    }\n\n    // Daten vorbereiten (SCHNELL)\n    var data = readRowData(sheet, row);\n    var triggerConfig = CONFIG.TRIGGERS[triggerCode];\n    var emailContent = getEmailFromTemplate(triggerConfig.templateSheet, buildMergeData(data, triggerConfig, '', {}));\n\n    // IN QUEUE einreihen (SCHNELL)\n    queueEmailForSending(data.emailLeader, emailContent.subject, emailContent.htmlBody, row, triggerCode);\n\n    // Status-Spalte aktualisieren\n    var statusCol = findStatusColumn(sheet, triggerConfig.statusColName);\n    if (statusCol > 0) {\n      sheet.getRange(row, statusCol).setValue('queued').setFontColor('#FF9800');\n    }\n\n    range.setValue(false);\n    SpreadsheetApp.getUi().alert('Email queued. Will be sent within 2 minutes.');\n\n  } catch (err) {\n    Logger.log('onEditTrigger Error: ' + err);\n    range.setValue(false);\n    SpreadsheetApp.getUi().alert('Error: ' + err.toString());\n  }\n}\n\n// 4. Setup: In Projekt-Trigger-Manager\n// + Trigger hinzuf\u00fcgen: processEmailQueue, zeitgesteuert, alle 2 Minuten\n```\n\n**Aufwand:** 2h 30 Min\n- 45 Min: Queue-Logik implementieren\n- 30 Min: Trigger-Setup (AppScript-UI, Dokumentation)\n- 45 Min: Testing (Queue-Aufbau, Retry-Logik, Timeout-Simulationen)\n- 30 Min: Dokumentation & Debugging-Hilfen\n\n**Impact:** Kritisch f\u00fcr Skalierung. MUSS vor Event-Tag gel\u00f6st sein.\n\n---\n\n### HOCH (2)\n\n#### 3. **Keine persistenten Logs**\n**Quelle:** DevOps Review\n**Schwere:** HOCH\n**Problem:** Logger.log() speichert nur 30 Tage. F\u00fcr Audit-Trail nicht ausreichend.\n\n**L\u00f6sung:** Audit-Log im Sheet:\n```javascript\nfunction logAudit_(action, rowId, details, status, errorMsg) {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('_AUDIT_LOG');\n  if (!sheet) {\n    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet('_AUDIT_LOG');\n    sheet.appendRow(['Timestamp', 'Action', 'RowId', 'Details', 'Status', 'User', 'Error']);\n    sheet.setTabColor('#CCCCCC');\n  }\n\n  sheet.appendRow([\n    new Date().toISOString(),\n    action,\n    rowId,\n    details,\n    status,\n    Session.getActiveUser().getEmail(),\n    errorMsg || ''\n  ]);\n}\n\n// \u00dcberall nutzen:\nlogAudit_('PAYMENT_TRIGGER', row, 'Code: ' + triggerCode, 'SUCCESS', '');\nlogAudit_('PAYMENT_TRIGGER', row, 'Code: ' + triggerCode, 'FAILED', err.toString());\nlogAudit_('WEBHOOK_RECEIVED', '', 'Payment ID: ' + paymentId, 'SUCCESS', '');\n```\n\n**Aufwand:** 1h (Funktion, 10+ Aufruf-Stellen, Testing)\n\n---\n\n#### 4. **Email-Fehlerbehandlung zu minimal**\n**Quelle:** DevOps Review \u2014 BenditoMollie.gs:488-493\n**Schwere:** HOCH\n**Problem:** Wenn Gmail-Quota \u00fcberschritten (100 pro Tag), wirft Exception und crasht.\n\n**L\u00f6sung:**\n```javascript\nfunction sendEmail_(to, subject, htmlBody) {\n  var options = {\n    htmlBody: htmlBody,\n    name: CONFIG.SENDER_NAME\n  };\n  if (CONFIG.REPLY_TO_EMAIL) {\n    options.replyTo = CONFIG.REPLY_TO_EMAIL;\n  }\n\n  try {\n    MailApp.sendEmail(to, subject, '', options);\n    Logger.log('Email sent to: ' + to);\n    return { success: true, to: to };\n  } catch (err) {\n    var errMsg = err.toString();\n\n    if (errMsg.indexOf('Rate Limit') > -1 || errMsg.indexOf('quota') > -1) {\n      Logger.log('Gmail quota exceeded. Email will be retried.');\n      return { success: false, retry: true, error: 'Gmail quota exceeded', to: to };\n    } else if (errMsg.indexOf('Invalid email') > -1) {\n      Logger.log('Invalid email address: ' + to);\n      return { success: false, retry: false, error: 'Invalid email', to: to };\n    } else {\n      Logger.log('Unexpected email error: ' + errMsg);\n      return { success: false, retry: false, error: errMsg, to: to };\n    }\n  }\n}\n\n// Nutzer in processPaymentTrigger:\nvar result = sendEmail_(primaryEmail, emailContent.subject, emailContent.htmlBody);\nif (!result.success) {\n  if (result.retry) {\n    // Email in Queue f\u00fcr Retry\n    queueEmailForSending(result.to, emailContent.subject, emailContent.htmlBody, row, triggerCode);\n  } else {\n    // User-Alert\n    SpreadsheetApp.getUi().alert('Email Error: ' + result.error);\n  }\n}\n```\n\n**Aufwand:** 1h\n\n---\n\n### MITTEL (2)\n\n#### 5. **Keine try/finally um kritische Operationen**\n**Quelle:** DevOps Review \u2014 BenditoMollie.gs:89\n**Schwere:** MITTEL\n**Problem:** Bei Fehler in processPaymentTrigger wird Checkbox nicht zur\u00fcckgesetzt \u2192 State-Inkonsistenz.\n\n**L\u00f6sung:**\n```javascript\ntry {\n  processPaymentTrigger(sheet, row, triggerValue);\n  logAudit_('PAYMENT_TRIGGER', row, 'Code: ' + triggerValue, 'SUCCESS');\n} catch (err) {\n  logAudit_('PAYMENT_TRIGGER', row, 'Code: ' + triggerValue, 'FAILED', err.toString());\n  SpreadsheetApp.getUi().alert('Error: ' + err.toString());\n} finally {\n  range.setValue(false); // IMMER reset\n}\n```\n\n**Aufwand:** 15 Min\n\n---\n\n#### 6. **Keine Backup-Strategie**\n**Quelle:** DevOps Review\n**Schwere:** MITTEL\n**Problem:** Google macht Auto-Backups, aber kein manueller Snapshot m\u00f6glich bei Datenverlust.\n\n**L\u00f6sung:**\n```javascript\nfunction backupParticipantData() {\n  var ss = SpreadsheetApp.getActiveSpreadsheet();\n  var sheet = ss.getSheetByName(CONFIG.SHEET_NAME);\n  var data = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();\n\n  var dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');\n  var backupSheet = ss.getSheetByName('_BACKUP_' + dateStr);\n  if (!backupSheet) {\n    backupSheet = ss.insertSheet('_BACKUP_' + dateStr);\n  }\n\n  backupSheet.getRange(1, 1, data.length, data[0].length).setValues(data);\n  Logger.log('Backup created: _BACKUP_' + dateStr);\n}\n\n// Trigger: t\u00e4glich um 02:00 Uhr\n```\n\n**Aufwand:** 30 Min\n\n---\n\n## ARCHITEKTUR-EXPERTE \u2014 5 Funde\n\n### HOCH (2)\n\n#### 1. **Zu tiefe Kopplung: Trigger \u2192 Template \u2192 Email-Logik**\n**Quelle:** Architecture Review\n**Schwere:** HOCH\n**Problem:** Um einen neuen Trigger (z.B. \"3pe\") hinzuzuf\u00fcgen, m\u00fcssen 4 Dateien ge\u00e4ndert werden. Zuk\u00fcnftige Features sind blockiert.\n\n**L\u00f6sung:** Plugin-Registry:\n```javascript\n// TriggerRegistry.gs (neue Datei)\nvar TRIGGER_REGISTRY = {\n  '1pe': {\n    ...CONFIG.TRIGGERS['1pe'],\n    validator: function(data) {\n      if (!data.emailFollower) return { ok: false, error: 'No follower email' };\n      return { ok: true };\n    },\n    onSuccess: function(sheet, row, paymentId) {\n      // Custom actions nach erfolgreicher Zahlung\n    }\n  },\n  // ... weitere Trigger ...\n};\n\n// In BenditoMollie.gs:\nfunction processPaymentTrigger(sheet, row, triggerCode) {\n  var config = TRIGGER_REGISTRY[triggerCode];\n  if (!config) throw new Error('Unknown trigger: ' + triggerCode);\n\n  // Validator aufrufen\n  var validation = config.validator(readRowData(sheet, row));\n  if (!validation.ok) throw new Error(validation.error);\n\n  // Standard-Verarbeitung\n  var data = readRowData(sheet, row);\n  var emailContent = getEmailFromTemplate(config.templateSheet, buildMergeData(data, config, '', {}));\n  // ...\n\n  // Custom onSuccess-Handler\n  if (config.onSuccess) {\n    config.onSuccess(sheet, row, molliePaymentId);\n  }\n}\n```\n\n**Aufwand:** 3h (Registry-System, Umstellung aller Trigger, Testing)\n\n---\n\n#### 2. **Keine Fehlertoleranz f\u00fcr Mollie-API-Ausf\u00e4lle**\n**Quelle:** Architecture Review\n**Schwere:** HOCH\n**Problem:** Mollie-API-Call kann fehlschlagen. Kein Fallback oder Retry.\n\n**L\u00f6sung:** Retry-Logik mit Graceful Degradation:\n```javascript\nfunction createMolliePaymentLinkWithRetry(amount, description, row, maxRetries = 3) {\n  for (var attempt = 1; attempt <= maxRetries; attempt++) {\n    try {\n      var result = createMolliePaymentLink(amount, description, row);\n      return result;\n    } catch (err) {\n      Logger.log('Mollie API Error (Attempt ' + attempt + '/' + maxRetries + '): ' + err);\n\n      if (attempt < maxRetries) {\n        // Exponential Backoff: 2s, 4s, 8s\n        Utilities.sleep(Math.pow(2, attempt) * 1000);\n      } else {\n        // Graceful Degradation: Alternative Zahlungsmethode\n        Logger.log('Mollie unreachable. Sending email with alternative payment method.');\n        return {\n          id: 'OFFLINE_' + Utilities.getUuid(),\n          paymentUrl: '',\n          offline: true,\n          error: 'Mollie API timeout. Alternative payment info sent via email.'\n        };\n      }\n    }\n  }\n}\n```\n\n**Aufwand:** 1h 15 Min\n\n---\n\n### MITTEL (3)\n\n#### 3. **Sheet-Struktur ist spr\u00f6de (feste Spalten-Indizes)**\n**Quelle:** Architecture Review\n**Schwere:** MITTEL\n**Problem:** CONFIG.COL = { MOLLIE_ID: 75, ... }. Wenn jemand Spalte A einf\u00fcgt, brechen alle.\n\n**L\u00f6sung:** Header-basierte Aufl\u00f6sung:\n```javascript\n// SheetSchema.gs\nvar SHEET_SCHEMA = {\n  ANREDE: 'Anrede',\n  FIRST_NAME: 'first name',\n  LAST_NAME: 'last name',\n  EMAIL_LEADER: 'Email Leader',\n  EMAIL_FOLLOWER: 'email follower',\n  MOLLIE_ID: 'Mollie Payment (ID)',\n  PAYMENT_STATUS: 'Payment Status',\n  MOLLIE_URL: 'Mollie Payment URL',\n  // ...\n};\n\nfunction getColIndexByHeader(sheet, headerName) {\n  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];\n  var idx = headers.indexOf(headerName);\n  if (idx === -1) throw new Error('Column not found: ' + headerName);\n  return idx + 1;\n}\n\n// Dann \u00fcberall nutzen:\nvar emailCol = getColIndexByHeader(sheet, SHEET_SCHEMA.EMAIL_LEADER);\nvar emailLeader = sheet.getRange(row, emailCol).getValue();\n```\n\n**Aufwand:** 2h (Refactoring aller Col-Zugriffe, Testing)\n\n---\n\n#### 4. **Barcode-Generierung hart an externe API gebunden**\n**Quelle:** Architecture Review\n**Schwere:** MITTEL\n**Problem:** Wenn barcode.tec-it.com down ist, f\u00e4llt Email-Versand aus.\n\n**L\u00f6sung:** Adapter-Pattern mit Fallback:\n```javascript\n// BarcodeGenerator.gs (neue Datei)\nvar BarcodeGenerator = {\n  generate: function(code, format = 'CODE128') {\n    try {\n      return generateViaExternalAPI_(code, format);\n    } catch (err) {\n      Logger.log('Barcode API failed, using QR-Code fallback');\n      return generateQRCodeFallback_(code);\n    }\n  }\n};\n\nfunction generateViaExternalAPI_(code, format) {\n  var url = 'https://barcode.tec-it.com/barcode.ashx?data=' + encodeURIComponent(code) +\n    '&code=' + format + '&fmt=png&style=197';\n  var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true, timeout: 5000 });\n\n  if (response.getResponseCode() === 200) {\n    return response.getBlob();\n  } else {\n    throw new Error('Barcode API returned ' + response.getResponseCode());\n  }\n}\n\nfunction generateQRCodeFallback_(code) {\n  // Google Charts API\n  var qrUrl = 'https://chart.googleapis.com/chart?chs=200x200&chld=L|0&cht=qr&chl=' + encodeURIComponent(code);\n  var response = UrlFetchApp.fetch(qrUrl);\n  return response.getBlob().setName('qrcode.png');\n}\n```\n\n**Aufwand:** 2h\n\n---\n\n#### 5. **Payment-Status nicht konsistent modelliert**\n**Quelle:** Architecture Review\n**Schwere:** MITTEL\n**Problem:** Payment-Status in 2-3 verschiedenen Spalten. Redundanz + Inkonsistenzrisiko.\n\n**L\u00f6sung:** Unified State-Machine:\n```javascript\n// PaymentState.gs\nvar PaymentState = {\n  PENDING: 'pending',\n  LINK_SENT: 'link_sent',\n  AWAITING_PAYMENT: 'awaiting_payment',\n  PAID: 'paid',\n  REFUNDED: 'refunded',\n  FAILED: 'failed'\n};\n\nfunction updatePaymentState(sheet, row, newState, metadata = {}) {\n  sheet.getRange(row, CONFIG.COL.PAYMENT_STATUS).setValue(newState);\n\n  if (metadata.timestamp) {\n    sheet.getRange(row, findColIndexByHeader(sheet, 'Updated At')).setValue(metadata.timestamp);\n  }\n}\n\n// Nutzen in:\nupdatePaymentState(sheet, row, PaymentState.LINK_SENT, { timestamp: new Date() });\n```\n\n**Aufwand:** 1.5h\n\n---\n\n## DOMAIN-PRAKTIKER (EVENT-ORGANISATOR) \u2014 6 Funde\n\n### KRITISCH (1)\n\n#### 1. **Offline-Modus ohne echte Konfliktaufl\u00f6sung**\n**Quelle:** Domain Review\n**Schwere:** KRITISCH\n**Problem:** Check-in-System speichert offline in localStorage. Nach 30 Min WLAN-Ausfall k\u00f6nnen sich gleiche Leute mehrfach einchecken. Beim Sync haben wir Duplikate.\n\n**L\u00f6sung:** Conflict Resolution + Deduplication:\n```javascript\n// CheckinSync.gs (neue Datei)\nfunction syncCheckinQueue(queueData) {\n  // queueData = [{barcode, action, timestamp, source}, ...]\n  var ss = SpreadsheetApp.getActiveSpreadsheet();\n  var sheet = ss.getSheetByName('_CHECKINS');\n\n  if (!sheet) {\n    sheet = ss.insertSheet('_CHECKINS');\n    sheet.appendRow(['Timestamp', 'Barcode', 'Action', 'Source', 'Status']);\n  }\n\n  for (var i = 0; i < queueData.length; i++) {\n    var item = queueData[i];\n\n    // Duplicate Detection: gleicher Barcode + gleiche Action in < 2 Min\n    var data = sheet.getRange(2, 1, sheet.getLastRow()-1, 5).getValues();\n    var duplicate = false;\n\n    for (var j = 0; j < data.length; j++) {\n      var existingBarcode = data[j][1];\n      var existingAction = data[j][2];\n      var existingTime = new Date(data[j][0]);\n\n      if (existingBarcode === item.barcode &&\n          existingAction === item.action &&\n          Math.abs(new Date(item.timestamp) - existingTime) < 120000) { // 2 Min\n        duplicate = true;\n        Logger.log('Duplicate check-in detected and ignored: ' + item.barcode);\n        break;\n      }\n    }\n\n    if (!duplicate) {\n      sheet.appendRow([new Date(item.timestamp), item.barcode, item.action, item.source, 'synced']);\n    }\n  }\n}\n```\n\n**Aufwand:** 2h (Dedup-Logik, Frontend-\u00c4nderungen, Offline-Szenarien-Test)\n\n**Impact:** MUSS vor Event-Tag gel\u00f6st sein. Sonst Chaos bei Check-in.\n\n---\n\n### HOCH (2)\n\n#### 2. **Kein Fallback f\u00fcr Scanner-Ausf\u00e4lle**\n**Quelle:** Domain Review\n**Schwere:** HOCH\n**Problem:** Check-in h\u00e4ngt 100% vom Scanner ab. Falls Scanner kaputt/WLAN-Out, T\u00fcrperson kann nicht manuell einchecken.\n\n**L\u00f6sung:** Manuelle Fallback-Funktion:\n```html\n<!-- In CheckinApp.html: Button f\u00fcr manuelles Einchecken -->\n<button onclick=\"openManualCheckin()\">Manual Check-in (Fallback)</button>\n\n<script>\nfunction openManualCheckin() {\n  var firstName = prompt('First Name:');\n  var lastName = prompt('Last Name:');\n\n  if (!firstName || !lastName) return;\n\n  google.script.run.findParticipantByName(firstName, lastName, function(result) {\n    if (result && result.barcode) {\n      recordCheckin(result.barcode);\n      showSuccess('Welcome ' + firstName + '! Armband: ' + result.role);\n    } else {\n      alert('Participant not found. Check spelling.');\n    }\n  });\n}\n</script>\n```\n\n**Aufwand:** 1.5h (UI-Button, Suchlogik im Backend, Testing)\n\n---\n\n#### 3. **Kein Szenario f\u00fcr Stornierungen**\n**Quelle:** Domain Review\n**Schwere:** HOCH\n**Problem:** 2 Tage vor Event fallen Leute aus. Keine Refund / Benachrichtigung / Armband-R\u00fcckzuweisung im System.\n\n**L\u00f6sung:** Cancellation-Workflow:\n```javascript\nfunction cancelRegistration(sheet, row) {\n  var data = readRowData(sheet, row);\n  var triggerCode = sheet.getRange(row, CONFIG.COL.TRIGGER).getValue().toString().trim();\n  var triggerConfig = CONFIG.TRIGGERS[triggerCode];\n\n  // 1. Status markieren\n  updatePaymentState(sheet, row, PaymentState.CANCELLED);\n\n  // 2. Refund wenn m\u00f6glich\n  var mollieId = sheet.getRange(row, CONFIG.COL.MOLLIE_ID).getValue();\n  if (mollieId) {\n    var refundResult = createMollieRefund(mollieId);\n    Logger.log('Refund initiated: ' + refundResult.id);\n  }\n\n  // 3. Beide Partner benachrichtigen (bei Paaren)\n  if (triggerConfig.isCouple && data.emailLeader && data.emailFollower) {\n    var emailContent = getEmailFromTemplate('TPL_cancellation', buildMergeData(data, triggerConfig, '', {}));\n    sendEmail_(data.emailLeader, 'Registration Cancelled', emailContent.htmlBody);\n    sendEmail_(data.emailFollower, 'Registration Cancelled', emailContent.htmlBody);\n  }\n\n  // 4. Audit\n  logAudit_('CANCELLATION', row, 'Code: ' + triggerCode, 'SUCCESS');\n}\n\n// Mollie Refund API\nfunction createMollieRefund(paymentLinkId) {\n  // Hinweis: Mollie Payment Links k\u00f6nnen nicht direkt refunded werden\n  // M\u00fcssen \u00fcber die untergeordnete Payment-ID refunded werden\n  // Das erfordert zus\u00e4tzliche Daten-Struktur (Payment-ID speichern)\n}\n```\n\n**Aufwand:** 2h (Workflow, Refund-API, Template, Testing)\n\n---\n\n### MITTEL (3)\n\n#### 4. **Armband-Audit und Validierung fehlt**\n**Quelle:** Domain Review\n**Schwere:** MITTEL\n**Problem:** Armb\u00e4nder (Rot/Blau/Gelb) sind manuell. Keine Validierung, ob T\u00fcrperson richtige Farbe gibt.\n\n**L\u00f6sung:**\n```javascript\nfunction recordArmbandIssued(barcode, color) {\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('_ARMBANDS');\n  if (!sheet) {\n    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet('_ARMBANDS');\n    sheet.appendRow(['Timestamp', 'Barcode', 'Armband-Color', 'Expected-Color', 'Status', 'Issued-By']);\n  }\n\n  var expectedColor = getExpectedArmbandColor(barcode);\n  var status = (color === expectedColor) ? 'OK' : 'MISMATCH';\n\n  sheet.appendRow([\n    new Date(),\n    barcode,\n    color,\n    expectedColor,\n    status,\n    Session.getActiveUser().getEmail()\n  ]);\n\n  if (status === 'MISMATCH') {\n    Logger.log('WARNING: Armband mismatch for ' + barcode);\n    // Alert Coordinator (Slack/Email)\n  }\n}\n\nfunction getExpectedArmbandColor(barcode) {\n  // Lookup in Anmeldungen-Sheet\n  var ss = SpreadsheetApp.getActiveSpreadsheet();\n  var sheet = ss.getSheetByName(CONFIG.SHEET_NAME);\n  var data = sheet.getRange(3, 1, sheet.getLastRow()-2, sheet.getLastColumn()).getValues();\n\n  for (var i = 0; i < data.length; i++) {\n    if (data[i][2] === barcode) { // Spalte C\n      var triggerCode = data[i][2].toLowerCase();\n      if (triggerCode.indexOf('m') > -1) return 'RED';      // Leader\n      if (triggerCode.indexOf('pe') > -1 || triggerCode.indexOf('f') > -1) return 'BLUE';\n      if (triggerCode.indexOf('h') > -1) return 'YELLOW';\n    }\n  }\n  return 'UNKNOWN';\n}\n```\n\n**Aufwand:** 1.5h\n\n---\n\n#### 5. **Keine Vorbereitung f\u00fcr WiFi-Ausf\u00e4lle (Fallback)**\n**Quelle:** Domain Review\n**Schwere:** MITTEL\n**Problem:** Plan sagt \"WiFi unreliable\", aber kein physischer Fallback-Prozess.\n\n**L\u00f6sung:** Offline-Dokumentation:\n```markdown\n## OFFLINE FALLBACK PROCESS\n\n**Wenn ALLE Devices offline sind (kein WiFi):**\n\n1. **Check-in mit Papier:**\n   - Gedruckte Liste mit allen 120 Teilnehmern + Barcodes\n   - T\u00fcrperson hakt mit Stift ab\n   - Liste aufbewahren bis WiFi wieder online\n\n2. **Nach WiFi-R\u00fcckkehr:**\n   - Alle Barcodes erneut mit Scanner einscannen\n   - System dedupliziert automatisch (via CheckinSync)\n   - Papier-Liste kann dann recycelt werden\n\n3. **Backup-Ger\u00e4te:**\n   - Backup-iPad mit vorgeladener App (USB offline-sync)\n   - Ersatz-Scanner (Second Device)\n   - Power-Banks f\u00fcr alle Devices\n\n4. **Armband-Ausgabe (manuell):**\n   - Armband-Farbe entsprechend Rolle (rot/blau/gelb)\n   - Keine Scanner-Abh\u00e4ngigkeit\n```\n\n**Aufwand:** 2h (Dokumentation, Offline-Setup testen, Checklisten)\n\n---\n\n#### 6. **Partner-Benachrichtigungen fehlen**\n**Quelle:** Domain Review\n**Schwere:** MITTEL\n**Problem:** Paar registriert. Leader bekommt Email. Follower bekommt... nichts.\n\n**L\u00f6sung:**\n```javascript\nfunction notifyPartnersOfRegistration(sheet, row, triggerCode, triggerConfig) {\n  var data = readRowData(sheet, row);\n\n  if (!triggerConfig.isCouple) return;\n\n  // Beiden ein Best\u00e4tigungs-Email senden\n  var emailContent = getEmailFromTemplate('TPL_couple_confirmation', buildMergeData(data, triggerConfig, '', {}));\n\n  if (data.emailLeader) {\n    sendEmail_(data.emailLeader, 'Couple Registration Confirmed', emailContent.htmlBody);\n  }\n\n  if (data.emailFollower && data.emailFollower !== data.emailLeader) {\n    sendEmail_(data.emailFollower, 'Couple Registration Confirmed', emailContent.htmlBody);\n  }\n}\n```\n\n**Aufwand:** 1h\n\n---\n\n## PLATTFORM-EXPERTE (GOOGLE APPS SCRIPT) \u2014 6 Funde\n\n### KRITISCH (2)\n\n#### 1. **FALSCHER EMAIL-API: MailApp statt GmailApp**\n**Quelle:** Platform Review \u2014 BenditoMollie.gs:488\n**Schwere:** KRITISCH\n**Problem:** MailApp.sendEmail() unterst\u00fctzt KEIN `inlineImages`. Barcodes k\u00f6nnen nicht inline eingebettet werden. Der Plan v2 Punkt 2 sagt explizit: \"PNG statt SVG, GmailApp statt MailApp\".\n\n**Status im Code:** NICHT implementiert!\n\n**L\u00f6sung:**\n```javascript\n// ALT (FALSCH):\nMailApp.sendEmail(to, subject, '', options);\n\n// NEU (RICHTIG):\nfunction sendEmailWithInlineImages(to, subject, htmlBody, inlineImages) {\n  var options = {\n    htmlBody: htmlBody,\n    inlineImages: inlineImages,  // {placeholderId: blob, ...}\n    name: CONFIG.SENDER_NAME,\n    replyTo: CONFIG.REPLY_TO_EMAIL\n  };\n\n  GmailApp.sendEmail(to, subject, '', options);\n  Logger.log('Email sent via GmailApp (with inline images): ' + to);\n}\n\n// Im Template-HTML:\n// <img src=\"cid:barcode_image\" width=\"200\" alt=\"Barcode\">\n\n// Im Email-Versand:\nvar barcodeBlob = BarcodeGenerator.generate(participantCode);\nvar mergeData = buildMergeData(data, triggerConfig, '', {});\nvar emailContent = getEmailFromTemplate(triggerConfig.templateSheet, mergeData);\n\nsendEmailWithInlineImages(\n  to,\n  emailContent.subject,\n  emailContent.htmlBody,\n  { barcode_image: barcodeBlob }\n);\n```\n\n**Aufwand:** 1h 30 Min\n- 20 Min: GmailApp-Funktionen umschreiben\n- 30 Min: Inline-Images in Templates einbauen\n- 30 Min: Testing mit echten Barcodes + Gmail-Empfang\n- 10 Min: Dokumentation\n\n**Impact:** KRITISCH \u2014 Ohne diesen Fix funktioniert die ganze Barcode-im-Email-Strategie nicht!\n\n---\n\n#### 2. **6-Minuten-Limit bei Email-Batch nicht implementiert**\n**Quelle:** Platform Review\n**Schwere:** KRITISCH\n**Problem:** Siehe DevOps Fund 2 (auch Plattform-spezifisch). GAS-Execution-Limit ist **6 Minuten hard**. Bei onEdit-Trigger + multiple Emails = Timeout.\n\n**Status im Code:** NICHT implementiert! (Plan v2 Punkt 10 sagt \"Batch-Email in Zeitslots\", aber Code zeigt noch alte Logik)\n\n**L\u00f6sung:** (Siehe DevOps Fund 2: Email-Queue + zeitgesteuerter Trigger)\n\n**Aufwand:** 2.5h\n\n**Impact:** KRITISCH\n\n---\n\n### HOCH (2)\n\n#### 3. **Nur EINE onEdit-Funktion pro Projekt**\n**Quelle:** Platform Review\n**Schwere:** HOCH\n**Problem:** GAS erlaubt nur 1 `onEdit()`. Falls sp\u00e4ter neues Feature mit onEdit-Handler hinzukommt, gibt es Konflikt.\n\n**L\u00f6sung:** Dispatcher-Pattern:\n```javascript\n// TriggerDispatcher.gs (neue Datei)\nvar TRIGGER_HANDLERS = [];\n\nfunction onEdit(e) {\n  try {\n    var sheet = e.source.getActiveSheet();\n    var range = e.range;\n\n    for (var i = 0; i < TRIGGER_HANDLERS.length; i++) {\n      if (TRIGGER_HANDLERS[i].shouldHandle(sheet, range)) {\n        TRIGGER_HANDLERS[i].handle(e);\n      }\n    }\n  } catch (err) {\n    Logger.log('Trigger Error: ' + err);\n    SpreadsheetApp.getUi().alert('Error: ' + err.toString());\n  }\n}\n\nfunction registerTriggerHandler(handler) {\n  TRIGGER_HANDLERS.push(handler);\n}\n\n// Dann in BenditoMollie.gs:\nfunction setupTriggerHandlers() {\n  registerTriggerHandler({\n    shouldHandle: function(sheet, range) {\n      return sheet.getName() === CONFIG.SHEET_NAME &&\n             range.getColumn() === CONFIG.COL.SENDEN &&\n             range.getValue() === true;\n    },\n    handle: function(e) {\n      var sheet = e.source.getActiveSheet();\n      var row = e.range.getRow();\n      var triggerCode = sheet.getRange(row, CONFIG.COL.TRIGGER).getValue().toString().trim().toLowerCase();\n      // ... rest von onEditTrigger ...\n    }\n  });\n}\n\n// Im onOpen() aufrufen:\nfunction onOpen() {\n  setupTriggerHandlers();\n  // ... Menu erstellen ...\n}\n```\n\n**Aufwand:** 1.5h\n\n---\n\n#### 4. **CacheService TTL zu kurz (6h Max)**\n**Quelle:** Platform Review\n**Schwere:** HOCH\n**Problem:** Token-Lookup wird bei jedem Webhook durchsucht. CacheService hat max 6h. Bei 14-Tage-Deadline nicht ausreichend.\n\n**L\u00f6sung:**\n```javascript\n// TokenCache.gs (neue Datei)\nfunction buildTokenCacheDaily() {\n  // Trigger: zeitgesteuert t\u00e4glich um 02:00\n  var ss = SpreadsheetApp.getActiveSpreadsheet();\n  var sheet = ss.getSheetByName(CONFIG.SHEET_NAME);\n  var lastRow = sheet.getLastRow();\n\n  if (lastRow < 3) return;\n\n  var tokens = sheet.getRange(3, CONFIG.COL.PAYMENT_TOKEN, lastRow - 2, 1).getValues();\n  var cache = {};\n\n  for (var i = 0; i < tokens.length; i++) {\n    if (tokens[i][0]) {\n      var token = tokens[i][0].toString().trim();\n      cache[token] = i + 3; // row number\n    }\n  }\n\n  // In Properties speichern (unbegrenzte Dauer)\n  var props = PropertiesService.getScriptProperties();\n  props.setProperty('TOKEN_CACHE_JSON', JSON.stringify(cache));\n  props.setProperty('TOKEN_CACHE_BUILT_AT', new Date().getTime().toString());\n\n  Logger.log('Token cache rebuilt: ' + Object.keys(cache).length + ' tokens');\n}\n\nfunction findRowByTokenCached(token) {\n  var props = PropertiesService.getScriptProperties();\n  var cacheJson = props.getProperty('TOKEN_CACHE_JSON') || '{}';\n  var cache = JSON.parse(cacheJson);\n\n  if (cache[token]) {\n    return cache[token];\n  }\n\n  // Fallback: auf DB suchen (Cache ist alt)\n  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);\n  return findRowByToken_(sheet, token);\n}\n\n// In MollieWebhook.gs statt findRowByToken_() direkt nutzen:\nvar row = findRowByTokenCached(token);\n```\n\n**Aufwand:** 1h\n\n---\n\n### MITTEL (2)\n\n#### 5. **Keine Deployment-Versioning**\n**Quelle:** Platform Review\n**Schwere:** MITTEL\n**Problem:** Keine automatische Versionierung von Deployments.\n\n**L\u00f6sung:**\n```javascript\n// DeploymentInfo.gs\nfunction getDeploymentVersion() {\n  return '1.0.0'; // Manuell erh\u00f6hen bei jedem Deploy!\n}\n\nfunction reportDeploymentInfo() {\n  var version = getDeploymentVersion();\n  var url = ScriptApp.getService().getUrl();\n  Logger.log('Deployment Version: ' + version);\n  Logger.log('Script URL: ' + url);\n  Logger.log('Deployed at: ' + new Date().toISOString());\n}\n\n// Im MollieWebhook.gs:\nfunction doPost(e) {\n  var version = getDeploymentVersion();\n  try {\n    // ... Handler ...\n  } catch (err) {\n    postToSlack_('Webhook Error v' + version + ': ' + err.toString());\n  }\n}\n```\n\n**Aufwand:** 30 Min\n\n---\n\n#### 6. **Keine Batch-Operationen bei Sheet-Writes**\n**Quelle:** Platform Review\n**Schwere:** MITTEL\n**Problem:** Mehrere Zellen werden einzeln geschrieben (3+ API-Calls statt 1).\n\n**L\u00f6sung:**\n```javascript\n// ALT (ineffizient):\nsheet.getRange(row, C.PAYMENT_STATUS).setValue('link sent');\nsheet.getRange(row, C.MOLLIE_URL).setValue(paymentUrl);\nsheet.getRange(row, C.MOLLIE_ID).setValue(mollieId);\n\n// NEU (efficient):\nvar range = sheet.getRange(row, C.PAYMENT_STATUS, 1, 3);\nrange.setValues([['link sent', paymentUrl, mollieId]]);\nSpreadsheetApp.flush();\n```\n\n**Aufwand:** 1h\n\n---\n\n## TOP 12 MASSNAHMEN (PRIORISIERT)\n\n| # | Ma\u00dfnahme | Quelle | Aufwand | Prio | Go-Live-Blocker |\n|---|----------|--------|---------|------|-----------------|\n| 1 | **Webhook-Signatur-Validierung (HMAC-SHA256)** | Security + DevOps | 45 Min | KRITISCH | JA |\n| 2 | **MOLLIE_API_KEY in PropertiesService** | Security | 1h 20 Min | KRITISCH | JA |\n| 3 | **GmailApp statt MailApp f\u00fcr inline Barcodes** | Platform | 1h 30 Min | KRITISCH | JA |\n| 4 | **Email-Queue mit zeitgesteuertem Trigger (6-Min-Limit)** | DevOps + Platform | 2h 30 Min | KRITISCH | JA |\n| 5 | **Offline-Conflict-Resolution & Deduplication** | Domain | 2h | KRITISCH | JA |\n| 6 | **Deployment-Versioning & Rollback-Prozess** | DevOps | 1h 30 Min | HOCH | NEIN |\n| 7 | **Trigger-Registry (Plugin-Architektur)** | Architecture | 3h | HOCH | NEIN |\n| 8 | **Mollie-Retry mit Graceful Degradation** | Architecture | 1h 15 Min | HOCH | NEIN |\n| 9 | **Persistente Audit-Logs im _AUDIT_LOG Sheet** | DevOps + Security | 1h | HOCH | NEIN |\n| 10 | **Fallback-Funktion f\u00fcr manuelles Check-in** | Domain | 1.5h | HOCH | NEIN |\n| 11 | **Cancellation-Workflow (Refunds, Benachrichtigungen)** | Domain | 2h | HOCH | NEIN |\n| 12 | **WiFi-Fallback Dokumentation + Offline-Checkliste** | Domain | 2h | MITTEL | NEIN |\n\n---\n\n## WEITERE MASSNAHMEN (NICE-TO-HAVE)\n\n| # | Ma\u00dfnahme | Aufwand | Prio |\n|---|----------|---------|------|\n| 13 | XSS-Pr\u00e4vention in JavaScript-Templates | 20 Min | MITTEL |\n| 14 | Email-Validierung | 15 Min | MITTEL |\n| 15 | Rate-Limiting auf Payment-Token | 30 Min | MITTEL |\n| 16 | Barcode-Image-Signatur-Validierung | 20 Min | MITTEL |\n| 17 | DSGVO-Datenl\u00f6schung (Retention-Policy) | 1h | MITTEL |\n| 18 | Log-Sanitization (PII) | 20 Min | MITTEL |\n| 19 | Try/Finally-Umh\u00fcllung | 15 Min | MITTEL |\n| 20 | Backup-Strategie | 30 Min | MITTEL |\n| 21 | Header-basierte Spalten-Aufl\u00f6sung (SheetSchema.gs) | 2h | MITTEL |\n| 22 | Barcode-API Fallback (QR-Code) | 2h | MITTEL |\n| 23 | Unified Payment-State-Machine | 1.5h | MITTEL |\n| 24 | Armband-Audit & Validierung | 1.5h | MITTEL |\n| 25 | Partner-Benachrichtigungen | 1h | MITTEL |\n| 26 | CacheService \u2192 Properties (Token-Lookup) | 1h | MITTEL |\n| 27 | Deployment-Info-Tracking | 30 Min | MITTEL |\n| 28 | Batch-Sheet-Operations | 1h | MITTEL |\n\n---\n\n## ZEITSCH\u00c4TZUNG\n\n**Minimum f\u00fcr Go-Live (5 KRITISCHE Ma\u00dfnahmen):** 9-10 Stunden\n- Webhook-Signatur: 45 Min\n- API-Key-Sicherung: 1h 20 Min\n- GmailApp-Umstieg: 1h 30 Min\n- Email-Queue: 2h 30 Min\n- Offline-Deduplication: 2h\n- **Total: 8h 5 Min + Testing/Buffer = ca. 10h**\n\n**Safe-for-Production (Top 12 + Testing):** 20-25 Stunden\n- Top 12 Ma\u00dfnahmen: 17h 45 Min\n- Integration-Testing: 3h\n- Load-Testing (120 Teilnehmer): 2h\n- Dokumentation + Runbooks: 2h\n\n**Full-Featured (alle 28 Punkte):** 40-45 Stunden\n\n---\n\n## EMPFOHLENER UMSETZUNGS-PLAN\n\n### Phase 1: Go-Live-Ready (5 KRITISCHE) \u2014 Woche 1\n1. **Montag:** Webhook-Signatur + API-Key-Sicherung\n2. **Dienstag:** GmailApp-Umstieg + Testing\n3. **Mittwoch:** Email-Queue-Infrastruktur\n4. **Donnerstag:** Offline-Dedup-Logik + Testing\n5. **Freitag:** Integration-Test, Bug-Fixes, Deployment\n\n### Phase 2: Production-Ready (Top 12) \u2014 Woche 2\n1. Deployment-Versioning\n2. Trigger-Registry\n3. Mollie-Retry\n4. Audit-Logs\n5. Fallbacks (Scanner, Cancellation, WiFi)\n\n### Phase 3: Nice-to-Have (Reste) \u2014 Woche 3+\nWenn Budget erlaubt, alles andere.\n\n---\n\n## N\u00c4CHSTE SCHRITTE\n\n1. **Stakeholder-Alignment:** Zeige diese Ergebnisse den Entwicklern + Event-Koordinator\n2. **Priorisierung:** W\u00e4hle Ma\u00dfnahmen entsprechend verf\u00fcgbarer Zeit\n3. **Task-Breakdown:** Jede Ma\u00dfnahme in 30-Min-Chunks f\u00fcr Daily-Standup\n4. **Testing-Plan:** QA-Szenarien f\u00fcr jede Ma\u00dfnahme definieren\n5. **Rollback-Plan:** Falls Deployment fehlschl\u00e4gt, wie recover?\n\n---\n\n## FAZIT\n\nDas System ist **funktional**, aber mit **kritischen Sicherheits- und Infrastruktur-L\u00fccken**. Mit 10 Stunden fokussierter Arbeit wird es Go-Live-Ready. Mit 25 Stunden wird es Production-Grade.\n\n**Biggest Risks ohne Fixes:**\n- Zahlungs-F\u00e4lschungen (Webhook)\n- API-Key-Leak (Config)\n- Barcode-Versand schl\u00e4gt fehl (MailApp-Bug)\n- System-Timeouts bei Load (Email-Queue)\n- Check-in-Duplikate offline (Sync)\n\n**Biggest Wins Quick:**\n- Webhook-Signatur: 5 Min Entwicklung, verhindert Milliarden-Loss-Scenario\n- Email-Queue: 2.5h, macht System stabil unter Last\n- Offline-Dedup: 2h, verhindert Datenchaos\n\n---\n\n**Review durchgef\u00fchrt von:** 5-Experten-Team\n**Status:** ACTIONABLE\n**N\u00e4chstes Review:** Nach Umsetzung Phase 1 (ca. 1 Woche)\n"}], "grading": null}], "previous_feedback": {}, "previous_outputs": {}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

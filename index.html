@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>Bendito Check-in</title>
+  <style>
+    /* ========== RESET + DARK MODE ========== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #1a1a1a; color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
+    /* ========== HEADER ========== */
+    .header {
+      background: #222;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #F5A623;
+    }
+    .header h1 { font-size: 18px; font-weight: bold; color: #F5A623; }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .status-dot.online { background: #4CAF50; }
+    .status-dot.offline { background: #F44336; }
+    .conn-status { font-size: 13px; color: #aaa; }
+
+    /* ========== SCANNER INPUT ========== */
+    .scanner-wrap {
+      padding: 16px;
+    }
+    #scanInput {
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 22px;
+      font-family: monospace;
+      background: #333;
+      color: #fff;
+      border: 2px solid #555;
+      border-radius: 8px;
+      outline: none;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    #scanInput:focus { border-color: #F5A623; }
+    #scanInput::placeholder { color: #666; letter-spacing: 0; font-family: sans-serif; font-size: 16px; }
+
+    /* ========== RESULT CARD ========== */
+    .result-card {
+      margin: 0 16px;
+      padding: 32px 20px;
+      border-radius: 12px;
+      text-align: center;
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+    .result-card.success { background: #1B5E20; }
+    .result-card.warning { background: #E65100; }
+    .result-card.error { background: #B71C1C; }
+    .result-card.cancelled { background: #4A148C; }
+    .result-card.info { background: #0D47A1; }
+
+    .result-icon { font-size: 48px; margin-bottom: 8px; }
+    .result-name { font-size: 70px; font-weight: bold; line-height: 1.1; margin: 8px 0; }
+    .result-rolle { font-size: 28px; color: rgba(255,255,255,0.85); margin: 4px 0; }
+    .result-armband {
+      display: inline-block;
+      font-size: 24px; font-weight: bold;
+      padding: 8px 24px;
+      border-radius: 20px;
+      margin: 12px 0;
+      border: 3px solid rgba(255,255,255,0.3);
+    }
+    .armband-rot { background: #C62828; color: #fff; }
+    .armband-blau { background: #1565C0; color: #fff; }
+    .armband-gelb { background: #F9A825; color: #000; }
+    .result-typ { font-size: 18px; color: rgba(255,255,255,0.7); margin: 4px 0; }
+    .result-time { font-size: 16px; color: rgba(255,255,255,0.5); margin: 4px 0; }
+    .result-msg { font-size: 20px; margin-top: 8px; }
+
+    /* ========== STATS BAR ========== */
+    .stats-bar {
+      padding: 16px;
+      display: flex;
+      justify-content: space-around;
+      background: #252525;
+      margin: 16px;
+      border-radius: 8px;
+    }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 28px; font-weight: bold; color: #F5A623; }
+    .stat-label { font-size: 12px; color: #888; margin-top: 2px; }
+
+    /* ========== BUTTONS ========== */
+    .actions {
+      padding: 8px 16px 16px;
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-search { background: #333; color: #fff; border: 1px solid #555; }
+    .btn-missing { background: #333; color: #fff; border: 1px solid #555; }
+    .btn-search:active, .btn-missing:active { background: #444; }
+
+    /* ========== MODAL ========== */
+    .modal-overlay {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      overflow-y: auto;
+    }
+    .modal {
+      background: #2a2a2a;
+      margin: 20px;
+      border-radius: 12px;
+      padding: 20px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+    .modal h2 { font-size: 20px; color: #F5A623; margin-bottom: 16px; }
+    .modal-close {
+      float: right;
+      background: none; border: none;
+      color: #888; font-size: 28px; cursor: pointer;
+      padding: 0 8px;
+    }
+    .modal input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 18px;
+      background: #333; color: #fff;
+      border: 1px solid #555; border-radius: 8px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    /* ========== PARTICIPANT LIST ========== */
+    .p-list { list-style: none; }
+    .p-item {
+      padding: 12px;
+      border-bottom: 1px solid #3a3a3a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .p-item:last-child { border-bottom: none; }
+    .p-name { font-size: 16px; font-weight: bold; }
+    .p-detail { font-size: 13px; color: #888; margin-top: 2px; }
+    .p-actions { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-checkin { background: #1B5E20; color: #fff; }
+    .btn-undo { background: #B71C1C; color: #fff; }
+    .btn-override { background: #F5A623; color: #000; }
+    .btn-checkin:disabled, .btn-undo:disabled { opacity: 0.4; cursor: default; }
+    .checked-in-badge { color: #4CAF50; font-size: 13px; }
+
+    /* ========== ROLE OVERRIDE DROPDOWN ========== */
+    .override-select {
+      background: #333; color: #fff;
+      border: 1px solid #555; border-radius: 4px;
+      padding: 4px 8px; font-size: 13px;
+    }
+
+    /* ========== LOADING ========== */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 16px;
+    }
+
+    /* ========== SYNC STATUS BAR ========== */
+    .sync-bar {
+      padding: 4px 16px;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      background: #1a1a1a;
+    }
+    .sync-bar .queue-count { color: #F5A623; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>BENDITO CHECK-IN</h1>
+    <span class="conn-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Verbinde...</span>
+    </span>
+  </div>
+
+  <!-- SCANNER -->
+  <div class="scanner-wrap">
+    <input type="text" id="scanInput" placeholder="Barcode scannen..."
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+
+  <!-- RESULT CARD -->
+  <div class="result-card" id="resultCard">
+    <div class="result-icon" id="resultIcon"></div>
+    <div class="result-name" id="resultName"></div>
+    <div class="result-rolle" id="resultRolle"></div>
+    <div class="result-armband" id="resultArmband"></div>
+    <div class="result-typ" id="resultTyp"></div>
+    <div class="result-time" id="resultTime"></div>
+    <div class="result-msg" id="resultMsg"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item">
+      <div class="stat-value" id="statLeaders">-/-</div>
+      <div class="stat-label">Leader</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statFollowers">-/-</div>
+      <div class="stat-label">Follower</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="statTotal">-/-</div>
+      <div class="stat-label">Gesamt</div>
+    </div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="actions">
+    <button class="btn btn-search" onclick="openSearchModal()">&#128269; Manuelle Suche</button>
+    <button class="btn btn-missing" onclick="openMissingModal()">&#128203; Fehlt noch</button>
+  </div>
+
+  <!-- SYNC STATUS -->
+  <div class="sync-bar" id="syncBar">
+    Zuletzt aktualisiert: <span id="lastSync">-</span>
+    &middot; Queue: <span class="queue-count" id="queueCount">0</span>
+  </div>
+
+  <!-- SEARCH MODAL -->
+  <div class="modal-overlay" id="searchModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeSearchModal()">&times;</button>
+      <h2>&#128269; Teilnehmer suchen</h2>
+      <input type="text" id="searchInput" placeholder="Name eingeben..."
+             oninput="handleSearch(this.value)">
+      <ul class="p-list" id="searchResults"></ul>
+    </div>
+  </div>
+
+  <!-- MISSING MODAL -->
+  <div class="modal-overlay" id="missingModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeMissingModal()">&times;</button>
+      <h2>&#128203; Noch nicht eingecheckt</h2>
+      <ul class="p-list" id="missingList"></ul>
+    </div>
+  </div>
+
+<script>
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+var participants = [];
+var syncQueue = [];
+var isOnline = false;
+var autoClearTimer = null;
+var EVENT_END_DATE = '2026-11-02';
+var CACHE_KEY = 'bendito_checkin_data';
+var QUEUE_KEY = 'bendito_sync_queue';
+
+// ============================================================
+// AUDIO (Web Audio API)
+// ============================================================
+var audioCtx = null;
+
+function initAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {
+    console.log('Web Audio API nicht verfuegbar');
+  }
+}
+
+function playBeep(frequency, duration) {
+  if (!audioCtx) return;
+  try {
+    // Resume context if suspended (autoplay policy)
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = frequency;
+    gain.gain.value = 0.3;
+    osc.start();
+    setTimeout(function() { osc.stop(); }, duration);
+  } catch (e) { /* Audio nicht kritisch */ }
+}
+
+function beepSuccess() { playBeep(880, 200); }
+function buzzWarning() { playBeep(440, 100); setTimeout(function() { playBeep(440, 100); }, 200); }
+function beepError() { playBeep(220, 300); setTimeout(function() { playBeep(220, 300); }, 400); }
+
+
+// ============================================================
+// BARCODE PARSING (Client-Side)
+// ============================================================
+function parseBarcodeLocal(barcodeId) {
+  if (!barcodeId) return null;
+  var id = barcodeId.toString().trim().toUpperCase();
+
+  // BTM26-005-L
+  var m = id.match(/^BTM26-(\d{3})-([LF])$/);
+  if (m) return { row: parseInt(m[1], 10), rolle: m[2] };
+
+  // BTM26005L (ohne Bindestriche)
+  var m2 = id.match(/^BTM26(\d{3})([LF])$/);
+  if (m2) return { row: parseInt(m2[1], 10), rolle: m2[2] };
+
+  return null;
+}
+
+
+// ============================================================
+// LOCAL LOOKUP (<1ms)
+// ============================================================
+function localLookup(barcodeId) {
+  var parsed = parseBarcodeLocal(barcodeId);
+  if (!parsed) return null;
+
+  for (var i = 0; i < participants.length; i++) {
+    var p = participants[i];
+    if (parsed.rolle === 'L' && p.barcodeLeader &&
+        p.barcodeLeader.toUpperCase() === barcodeId.toUpperCase()) return p;
+    if (parsed.rolle === 'F' && p.barcodeFollower &&
+        p.barcodeFollower.toUpperCase() === barcodeId.toUpperCase()) return p;
+  }
+  return null;
+}
+
+
+// ============================================================
+// SCAN HANDLER
+// ============================================================
+function handleScan(barcodeId) {
+  if (!barcodeId || barcodeId.length < 5) return;
+
+  // XSS-Schutz: nur alphanumerische Zeichen + Bindestrich erlauben
+  if (!/^[A-Za-z0-9\-]+$/.test(barcodeId)) {
+    showResult('error', '?', 'UNGUELTIG', '', '', '', '', 'Unerlaubte Zeichen im Barcode');
+    beepError();
+    return;
+  }
+
+  // Audio-Kontext initialisieren (User-Interaktion noetig)
+  if (!audioCtx) initAudio();
+
+  var barcodeUpper = barcodeId.toUpperCase();
+  var parsed = parseBarcodeLocal(barcodeUpper);
+
+  if (!parsed) {
+    showResult('error', '&#10060;', 'NICHT GEFUNDEN', '', '', '', '', 'Ungueltiges Barcode-Format');
+    beepError();
+    return;
+  }
+
+  // Lokaler Lookup
+  var p = localLookup(barcodeUpper);
+  if (!p) {
+    showResult('error', '&#10060;', 'NICHT GEFUNDEN', '', '', '', '', 'Barcode nicht im System');
+    beepError();
+    return;
+  }
+
+  var rolle = parsed.rolle === 'L' ? 'leader' : 'follower';
+  var rolleDisplay = parsed.rolle === 'L' ? 'Leader' : 'Follower';
+  var name = rolle === 'leader' ? p.leaderName : p.followerName;
+  var alreadyCheckedIn = rolle === 'leader' ? p.checkinLeader : p.checkinFollower;
+
+  // Armband-Farbe basierend auf Rolle und Helfer-Status
+  var isHelfer = ['hf', 'hm', 'hp'].indexOf(p.trigger.toLowerCase()) > -1;
+  var armband;
+  if (isHelfer) {
+    armband = 'Gelb';
+  } else {
+    armband = parsed.rolle === 'L' ? 'Rot' : 'Blau';
+  }
+
+  if (alreadyCheckedIn) {
+    showResult('warning', '&#9888;&#65039;', name, rolleDisplay, armband, p.typ,
+      'Eingecheckt: ' + alreadyCheckedIn, 'BEREITS EINGECHECKT');
+    buzzWarning();
+    return;
+  }
+
+  // Lokal als eingecheckt markieren
+  var now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  if (rolle === 'leader') p.checkinLeader = now;
+  else p.checkinFollower = now;
+
+  // localStorage aktualisieren
+  saveParticipantsToCache();
+
+  // Erfolg anzeigen
+  showResult('success', '&#9989;', name, rolleDisplay, armband, p.typ, now, 'WILLKOMMEN!');
+  beepSuccess();
+  updateStats();
+
+  // Server-Sync (nicht-blockierend)
+  var nonce = generateNonce();
+  syncToServer(barcodeUpper, nonce);
+}
+
+
+// ============================================================
+// DISPLAY
+// ============================================================
+function showResult(type, icon, name, rolle, armband, typ, time, msg) {
+  var card = document.getElementById('resultCard');
+  card.className = 'result-card ' + type;
+  card.style.display = 'block';
+
+  document.getElementById('resultIcon').innerHTML = icon;
+  document.getElementById('resultName').textContent = name || '';
+  document.getElementById('resultRolle').textContent = rolle || '';
+
+  var armbandEl = document.getElementById('resultArmband');
+  if (armband) {
+    armbandEl.textContent = armband.toUpperCase() + 'ES ARMBAND';
+    armbandEl.className = 'result-armband armband-' + armband.toLowerCase();
+    armbandEl.style.display = 'inline-block';
+  } else {
+    armbandEl.style.display = 'none';
+  }
+
+  document.getElementById('resultTyp').textContent = typ || '';
+  document.getElementById('resultTime').textContent = time || '';
+  document.getElementById('resultMsg').textContent = msg || '';
+
+  // Auto-Clear nach 2,5 Sekunden
+  if (autoClearTimer) clearTimeout(autoClearTimer);
+  autoClearTimer = setTimeout(function() {
+    card.style.display = 'none';
+    document.getElementById('scanInput').focus();
+  }, 2500);
+}
+
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  var leadersExpected = 0, leadersIn = 0;
+  var followersExpected = 0, followersIn = 0;
+
+  for (var i = 0; i < participants.length; i++) {
+    var p = participants[i];
+    if (p.leaderName || p.barcodeLeader) {
+      leadersExpected++;
+      if (p.checkinLeader) leadersIn++;
+    }
+    if (p.followerName || p.barcodeFollower) {
+      followersExpected++;
+      if (p.checkinFollower) followersIn++;
+    }
+  }
+
+  document.getElementById('statLeaders').textContent = leadersIn + '/' + leadersExpected;
+  document.getElementById('statFollowers').textContent = followersIn + '/' + followersExpected;
+  document.getElementById('statTotal').textContent =
+    (leadersIn + followersIn) + '/' + (leadersExpected + followersExpected);
+}
+
+
+// ============================================================
+// SERVER SYNC
+// ============================================================
+function syncToServer(barcodeId, nonce) {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      // Server bestaetigt — Eintrag aus Queue entfernen (falls vorhanden)
+      removeFromQueue(nonce);
+      updateQueueDisplay();
+    })
+    .withFailureHandler(function(err) {
+      // Offline oder Fehler — in Queue speichern
+      addToQueue(barcodeId, nonce);
+      updateQueueDisplay();
+    })
+    .processCheckinScan(barcodeId, nonce);
+}
+
+
+// ============================================================
+// OFFLINE QUEUE (Transactional States)
+// ============================================================
+function addToQueue(barcodeId, nonce) {
+  syncQueue.push({
+    barcodeId: barcodeId,
+    nonce: nonce,
+    timestamp: new Date().toISOString(),
+    state: 'PENDING'   // PENDING → IN_FLIGHT → SYNCED / FAILED
+  });
+  saveQueueToStorage();
+}
+
+function removeFromQueue(nonce) {
+  syncQueue = syncQueue.filter(function(item) { return item.nonce !== nonce; });
+  saveQueueToStorage();
+}
+
+function saveQueueToStorage() {
+  try {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(syncQueue));
+  } catch (e) { /* localStorage voll oder unavailable */ }
+}
+
+function loadQueueFromStorage() {
+  try {
+    var data = localStorage.getItem(QUEUE_KEY);
+    if (data) syncQueue = JSON.parse(data);
+  } catch (e) { syncQueue = []; }
+}
+
+function retrySyncQueue() {
+  if (syncQueue.length === 0 || !isOnline) return;
+
+  // Nur PENDING und FAILED Eintraege senden
+  var toSync = syncQueue.filter(function(item) {
+    return item.state === 'PENDING' || item.state === 'FAILED';
+  });
+
+  if (toSync.length === 0) return;
+
+  // Alle als IN_FLIGHT markieren
+  for (var i = 0; i < toSync.length; i++) {
+    toSync[i].state = 'IN_FLIGHT';
+  }
+  saveQueueToStorage();
+
+  var queueJson = JSON.stringify(toSync);
+  google.script.run
+    .withSuccessHandler(function(resultJson) {
+      try {
+        var result = JSON.parse(resultJson);
+        if (result.results) {
+          for (var j = 0; j < result.results.length; j++) {
+            removeFromQueue(result.results[j].nonce);
+          }
+        }
+      } catch (e) {}
+      updateQueueDisplay();
+    })
+    .withFailureHandler(function(err) {
+      // Zurueck auf FAILED setzen
+      for (var k = 0; k < syncQueue.length; k++) {
+        if (syncQueue[k].state === 'IN_FLIGHT') {
+          syncQueue[k].state = 'FAILED';
+        }
+      }
+      saveQueueToStorage();
+      updateQueueDisplay();
+    })
+    .processSyncQueue(queueJson);
+}
+
+function updateQueueDisplay() {
+  document.getElementById('queueCount').textContent = syncQueue.length;
+}
+
+
+// ============================================================
+// CACHE (localStorage)
+// ============================================================
+function saveParticipantsToCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(participants));
+  } catch (e) { /* localStorage voll */ }
+}
+
+function loadParticipantsFromCache() {
+  try {
+    var data = localStorage.getItem(CACHE_KEY);
+    if (data) {
+      participants = JSON.parse(data);
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function checkAutoDelete() {
+  // DSGVO: localStorage nach Event automatisch loeschen
+  var eventEnd = new Date(EVENT_END_DATE).getTime();
+  var now = Date.now();
+  if (now > eventEnd + 24 * 3600 * 1000) {
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(QUEUE_KEY);
+    participants = [];
+    syncQueue = [];
+  }
+}
+
+
+// ============================================================
+// SEARCH MODAL
+// ============================================================
+function openSearchModal() {
+  document.getElementById('searchModal').style.display = 'block';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+  setTimeout(function() { document.getElementById('searchInput').focus(); }, 100);
+}
+
+function closeSearchModal() {
+  document.getElementById('searchModal').style.display = 'none';
+  document.getElementById('scanInput').focus();
+}
+
+function handleSearch(query) {
+  if (!query || query.length < 2) {
+    document.getElementById('searchResults').innerHTML = '';
+    return;
+  }
+
+  var q = query.toLowerCase();
+  var results = [];
+
+  for (var i = 0; i < participants.length; i++) {
+    var p = participants[i];
+    if ((p.leaderName && p.leaderName.toLowerCase().indexOf(q) > -1) ||
+        (p.followerName && p.followerName.toLowerCase().indexOf(q) > -1)) {
+      results.push(p);
+    }
+    if (results.length >= 10) break;
+  }
+
+  renderSearchResults(results);
+}
+
+function renderSearchResults(results) {
+  var html = '';
+  for (var i = 0; i < results.length; i++) {
+    var p = results[i];
+    html += renderParticipantItem(p);
+  }
+  document.getElementById('searchResults').innerHTML = html || '<li class="p-item"><span style="color:#888;">Keine Treffer</span></li>';
+}
+
+function renderParticipantItem(p) {
+  var leaderChecked = p.checkinLeader ? true : false;
+  var followerChecked = p.checkinFollower ? true : false;
+  var isHelfer = ['hf', 'hm', 'hp'].indexOf(p.trigger.toLowerCase()) > -1;
+
+  var html = '<li class="p-item"><div>';
+  html += '<div class="p-name">' + escapeHtml(p.leaderName);
+  if (p.followerName) html += ' &amp; ' + escapeHtml(p.followerName);
+  html += '</div>';
+  html += '<div class="p-detail">' + escapeHtml(p.typ);
+  if (leaderChecked) html += ' <span class="checked-in-badge">&#9989; Leader</span>';
+  if (followerChecked) html += ' <span class="checked-in-badge">&#9989; Follower</span>';
+  html += '</div>';
+  html += '</div><div class="p-actions">';
+
+  // Leader Check-in/Undo Button
+  if (p.barcodeLeader) {
+    if (!leaderChecked) {
+      html += '<button class="btn-sm btn-checkin" onclick="manualCheckin(' + p.rowRef + ',\'L\')">L &#10003;</button>';
+    } else {
+      html += '<button class="btn-sm btn-undo" onclick="undoCheckinLocal(' + p.rowRef + ',\'L\')">L &#8634;</button>';
+    }
+  }
+
+  // Follower Check-in/Undo Button
+  if (p.barcodeFollower) {
+    if (!followerChecked) {
+      html += '<button class="btn-sm btn-checkin" onclick="manualCheckin(' + p.rowRef + ',\'F\')">F &#10003;</button>';
+    } else {
+      html += '<button class="btn-sm btn-undo" onclick="undoCheckinLocal(' + p.rowRef + ',\'F\')">F &#8634;</button>';
+    }
+  }
+
+  // Role-Override Dropdown
+  html += '<select class="override-select" onchange="roleOverride(' + p.rowRef + ',this.value)">';
+  html += '<option value="">Armband</option>';
+  html += '<option value="Rot">Rot</option>';
+  html += '<option value="Blau">Blau</option>';
+  html += '<option value="Gelb">Gelb</option>';
+  html += '</select>';
+
+  html += '</div></li>';
+  return html;
+}
+
+
+// ============================================================
+// MANUAL CHECKIN / UNDO
+// ============================================================
+function manualCheckin(rowRef, rolle) {
+  var barcodeId = 'BTM26-' + ('000' + rowRef).slice(-3) + '-' + rolle;
+  handleScan(barcodeId);
+  // Refresh search display
+  setTimeout(function() {
+    var q = document.getElementById('searchInput').value;
+    if (q) handleSearch(q);
+  }, 100);
+}
+
+function undoCheckinLocal(rowRef, rolle) {
+  // Lokal rueckgaengig machen
+  for (var i = 0; i < participants.length; i++) {
+    if (participants[i].rowRef == rowRef) {
+      if (rolle === 'L') participants[i].checkinLeader = '';
+      else participants[i].checkinFollower = '';
+      break;
+    }
+  }
+  saveParticipantsToCache();
+  updateStats();
+
+  // Server-Sync
+  google.script.run
+    .withSuccessHandler(function() {})
+    .withFailureHandler(function() {})
+    .undoCheckin(rowRef, rolle);
+
+  // Refresh search display
+  var q = document.getElementById('searchInput').value;
+  if (q) handleSearch(q);
+}
+
+function roleOverride(rowRef, newArmband) {
+  if (!newArmband) return;
+
+  // Lokal aktualisieren
+  for (var i = 0; i < participants.length; i++) {
+    if (participants[i].rowRef == rowRef) {
+      participants[i].armband = newArmband;
+      break;
+    }
+  }
+  saveParticipantsToCache();
+
+  // Server-Sync
+  google.script.run
+    .withSuccessHandler(function() {})
+    .withFailureHandler(function() {})
+    .processRoleOverride(rowRef, newArmband);
+}
+
+
+// ============================================================
+// MISSING MODAL
+// ============================================================
+function openMissingModal() {
+  document.getElementById('missingModal').style.display = 'block';
+  renderMissingList();
+}
+
+function closeMissingModal() {
+  document.getElementById('missingModal').style.display = 'none';
+  document.getElementById('scanInput').focus();
+}
+
+function renderMissingList() {
+  var missing = [];
+  for (var i = 0; i < participants.length; i++) {
+    var p = participants[i];
+    if (p.leaderName && !p.checkinLeader) {
+      missing.push({ name: p.leaderName, rolle: 'Leader', rowRef: p.rowRef, typ: p.typ });
+    }
+    if (p.followerName && !p.checkinFollower) {
+      missing.push({ name: p.followerName, rolle: 'Follower', rowRef: p.rowRef, typ: p.typ });
+    }
+  }
+
+  var html = '';
+  if (missing.length === 0) {
+    html = '<li class="p-item"><span style="color:#4CAF50;font-size:18px;">Alle eingecheckt! &#127881;</span></li>';
+  } else {
+    html += '<li class="p-item" style="color:#888;border-bottom:2px solid #444;">' +
+            '<span>' + missing.length + ' Person(en) fehlen noch</span></li>';
+    for (var j = 0; j < missing.length; j++) {
+      var m = missing[j];
+      var rolleChar = m.rolle === 'Leader' ? 'L' : 'F';
+      html += '<li class="p-item">' +
+              '<div><div class="p-name">' + escapeHtml(m.name) + '</div>' +
+              '<div class="p-detail">' + escapeHtml(m.rolle) + ' &middot; ' + escapeHtml(m.typ) + '</div></div>' +
+              '<div class="p-actions">' +
+              '<button class="btn-sm btn-checkin" onclick="manualCheckin(' + m.rowRef + ',\'' + rolleChar + '\')">Einchecken</button>' +
+              '</div></li>';
+    }
+  }
+  document.getElementById('missingList').innerHTML = html;
+}
+
+
+// ============================================================
+// NONCE GENERATOR
+// ============================================================
+function generateNonce() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 8);
+}
+
+
+// ============================================================
+// HTML ESCAPE (XSS-Schutz)
+// ============================================================
+function escapeHtml(text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(text.toString()));
+  return div.innerHTML;
+}
+
+
+// ============================================================
+// DATA REFRESH (periodisch)
+// ============================================================
+function refreshDataFromServer() {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      try {
+        var data = JSON.parse(json);
+        // Merge: Server-Daten uebernehmen, aber lokale Check-ins behalten
+        mergeServerData(data.participants);
+        isOnline = true;
+        updateConnectionStatus(true);
+        updateStats();
+        document.getElementById('lastSync').textContent =
+          new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {}
+
+      // Offline-Queue verarbeiten
+      if (syncQueue.length > 0) retrySyncQueue();
+    })
+    .withFailureHandler(function(err) {
+      isOnline = false;
+      updateConnectionStatus(false);
+    })
+    .getCheckinDataForClient();
+}
+
+function mergeServerData(serverParticipants) {
+  if (!serverParticipants || !serverParticipants.length) return;
+
+  // Map der lokalen Daten (fuer lokale Check-ins die noch nicht gesynct sind)
+  var localMap = {};
+  for (var i = 0; i < participants.length; i++) {
+    var p = participants[i];
+    localMap[p.rowRef] = p;
+  }
+
+  // Server-Daten uebernehmen, aber lokale Check-ins behalten
+  for (var j = 0; j < serverParticipants.length; j++) {
+    var sp = serverParticipants[j];
+    var local = localMap[sp.rowRef];
+
+    if (local) {
+      // Wenn Server einen Check-in hat, immer uebernehmen
+      if (sp.checkinLeader) sp.checkinLeader = sp.checkinLeader;
+      // Wenn lokal eingecheckt aber Server noch nicht → lokal behalten
+      else if (local.checkinLeader) sp.checkinLeader = local.checkinLeader;
+
+      if (sp.checkinFollower) sp.checkinFollower = sp.checkinFollower;
+      else if (local.checkinFollower) sp.checkinFollower = local.checkinFollower;
+    }
+  }
+
+  participants = serverParticipants;
+  saveParticipantsToCache();
+}
+
+function updateConnectionStatus(online) {
+  var dot = document.getElementById('statusDot');
+  var text = document.getElementById('statusText');
+  if (online) {
+    dot.className = 'status-dot online';
+    text.textContent = 'Online';
+  } else {
+    dot.className = 'status-dot offline';
+    text.textContent = 'Offline';
+  }
+}
+
+
+// ============================================================
+// INIT
+// ============================================================
+function initApp() {
+  // DSGVO: Auto-Loesch pruefen
+  checkAutoDelete();
+
+  // Cached Daten laden (sofort verfuegbar)
+  if (loadParticipantsFromCache()) {
+    updateStats();
+    updateConnectionStatus(false);
+    document.getElementById('statusText').textContent = 'Cached (' + participants.length + ')';
+  }
+
+  // Offline-Queue laden
+  loadQueueFromStorage();
+  updateQueueDisplay();
+
+  // Frische Daten vom Server laden
+  refreshDataFromServer();
+
+  // Periodischer Refresh (alle 60 Sekunden)
+  setInterval(refreshDataFromServer, 60000);
+
+  // Queue-Retry (alle 30 Sekunden)
+  setInterval(function() {
+    if (syncQueue.length > 0 && isOnline) retrySyncQueue();
+  }, 30000);
+
+  // Scanner-Input
+  var scanInput = document.getElementById('scanInput');
+  scanInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var val = scanInput.value.trim();
+      if (val) {
+        handleScan(val);
+        scanInput.value = '';
+      }
+    }
+  });
+
+  // Autofocus
+  scanInput.focus();
+
+  // Click auf Body → Focus zurueck auf Scanner (ausser in Modals)
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.modal-overlay') && !e.target.closest('.btn') &&
+        !e.target.closest('select') && !e.target.closest('button')) {
+      scanInput.focus();
+    }
+  });
+}
+
+// Start
+initApp();
+</script>
+</body>
+</html>
